@@ -1,0 +1,124 @@
+frameworkVersion: ">=1.2.0 <=2.22.0"
+
+provider:
+  name: aws
+  runtime: python3.6
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+        - lambda:ListFunctions
+      Resource: "*"
+  environment:
+    BBRF_COUCHDB_URL: ${file(~/.bbrf/config.json):couchdb}
+    BBRF_USERNAME: ${file(~/.bbrf/config.json):username}
+    BBRF_PASSWORD: ${file(~/.bbrf/config.json):password}
+    BBRF_SLACK_TOKEN: ${file(~/.bbrf/config.json):slack_token}
+    LAMBDA_NAME_PREFIX: ${self:service}-${self:custom.stage}-
+    ENDPOINT_URL: { "Fn::Join" : ["", [" https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/" ] ]  }
+    VIRUSTOTAL_TOKEN: ${file(tokens.json):virustotal}
+    SHODAN_TOKEN: ${file(tokens.json):shodan}
+    SECURITYTRAILS_TOKEN: ${file(tokens.json):securitytrails}
+    PASSIVETOTAL_USER: ${file(tokens.json):passivetotal.user}
+    PASSIVETOTAL_KEY: ${file(tokens.json):passivetotal.key}
+
+functions:
+
+  agent-registration-service:
+    handler: agent_registration_service.register_all
+
+  # if a function follows this naming convention <name>-agent,
+  # it will automatically get picked up by the 
+  # agent registration service and be registered
+  # in BBRF so you can run it with `bbrf run <name>`
+  dnsgrep-agent:
+    handler: domains/dnsgrep.pool
+    events:
+      - schedule: rate(7 days) # the feed is only refreshed every week
+      
+  dnsgrep-worker:
+    handler: domains/dnsgrep.worker
+    events:
+      - http:
+          path: dnsgrep
+          method: get
+  
+  crtmonitor-agent:
+    handler: domains/crtmonitor.pool
+    events:
+      - schedule: rate(30 minutes)
+      
+  crtmonitor-worker:
+    handler: domains/crtmonitor.worker
+    events:
+      - http:
+          path: crtmonitor
+          method: get
+          
+  sublister-agent:
+    handler: domains/sublister.pool
+    events:
+      - schedule: rate(24 hours)
+      
+  sublister-worker:
+    handler: domains/sublister.worker
+    events:
+      - http:
+          path: sublister
+          method: get
+    timeout: 600
+    
+  virustotal-agent:
+    handler: domains/virustotal.worker
+    events:
+      - http:
+          path: virustotal
+          method: get
+    timeout: 600
+    
+  shodan-worker:
+    handler: domains/shodan.worker
+    events:
+      - http:
+          path: shodan
+          method: get
+    timeout: 600
+    
+  passivetotal-agent:
+    handler: domains/passivetotal.worker
+    events:
+      - http:
+          path: passivetotal
+          method: get
+    timeout: 600
+    
+  securitytrails-agent:
+    handler: domains/securitytrails.worker
+    events:
+      - http:
+          path: securitytrails
+          method: get
+    timeout: 600
+          
+plugins:
+  - serverless-python-requirements
+  - serverless-plugin-scripts
+  
+package:
+  exclude:
+    - .env/**
+    - ./gotest/**
+    - ./assetfinder/**
+  include:
+    - ./gotest/bin/**
+    - ./assetfinder/bin/**
+    
+custom:
+  pythonRequirements:
+    pythonBin: /usr/bin/python3
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  scripts:
+    hooks:
+      'deploy:finalize': sls invoke -f agent-registration-service
