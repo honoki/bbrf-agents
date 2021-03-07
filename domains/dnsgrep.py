@@ -8,7 +8,6 @@ bbrf_conf = {
   "couchdb": os.environ['BBRF_COUCHDB_URL'],
   "username": os.environ['BBRF_USERNAME'],
   "password": os.environ['BBRF_PASSWORD'],
-  "slack_token": os.environ['BBRF_SLACK_TOKEN'],
 }
 
 def bbrf(command):
@@ -23,7 +22,7 @@ def pool(event, context):
     # and send each to run in a new lambda
     client = boto3.client('lambda', region_name='us-east-1')
     
-    for program in bbrf('program list'):
+    for program in bbrf('programs'):
         print('Executing dnsgrep-worker for '+program)
         client.invoke(FunctionName='bbrf-agents-dev-dnsgrep-worker', InvocationType='Event', Payload=json.dumps({'program': program}))
 

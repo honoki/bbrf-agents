@@ -11,7 +11,6 @@ bbrf_conf = {
   "couchdb": os.environ['BBRF_COUCHDB_URL'],
   "username": os.environ['BBRF_USERNAME'],
   "password": os.environ['BBRF_PASSWORD'],
-  "slack_token": os.environ['BBRF_SLACK_TOKEN'],
 }
 
 def bbrf(command):
@@ -29,7 +28,7 @@ def pool(event, context):
     # hundreds of programs exist
     client = boto3.client('lambda', region_name='us-east-1')
     
-    for program in bbrf('program list'):
+    for program in bbrf('programs'):
         print('Executing sublister-worker for '+program)
         client.invoke(FunctionName='bbrf-agents-dev-sublister-worker', InvocationType='Event', Payload=json.dumps({'program': program}))
 

@@ -1,10 +1,12 @@
+[![Twitter Follow](https://img.shields.io/twitter/follow/honoki?style=flat-square)](https://twitter.com/honoki)
+
 ## bbrf-agents
 
 The Bug Bounty Reconnaissance Framework (BBRF) can be used to facilitate the workflows of security researchers across multiple devices.
 
 This repository contains a set of lambda functions (agents) that can be deployed to AWS Lambda with [the serverless framework](https://serverless.com/).
 
-When these agents are successfully deployed, you can call them with BBRF as follows:
+When these agents are successfully deployed, you can run them with BBRF as follows:
 
 ```bash
 # run the crtmonitor agent for the active program
@@ -26,8 +28,8 @@ This set of lambdas is built on top of Serverless, and contains a [serverless.ym
 # clone this repository
 git clone https://github.com/honoki/bbrf-agents
 
-# install the serverless framework
-apt install serverless
+# install the serverless framework - see https://www.serverless.com/framework/docs/getting-started/
+curl -o- -L https://slss.io/install | bash
 
 # run the serverless deploy command and follow the steps to
 # get things up and running

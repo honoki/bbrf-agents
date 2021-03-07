@@ -11,7 +11,6 @@ bbrf_conf = {
   "couchdb": os.environ['BBRF_COUCHDB_URL'],
   "username": os.environ['BBRF_USERNAME'],
   "password": os.environ['BBRF_PASSWORD'],
-  "slack_token": os.environ['BBRF_SLACK_TOKEN'],
 }
 
 def bbrf(command):

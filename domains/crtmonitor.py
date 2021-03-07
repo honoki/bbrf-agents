@@ -3,12 +3,13 @@ import boto3
 import psycopg2
 import os
 from bbrf.bbrf import BBRFClient
+import asyncio
+import functools
 
 bbrf_conf = {
   "couchdb": os.environ['BBRF_COUCHDB_URL'],
   "username": os.environ['BBRF_USERNAME'],
-  "password": os.environ['BBRF_PASSWORD'],
-  "slack_token": os.environ['BBRF_SLACK_TOKEN'],
+  "password": os.environ['BBRF_PASSWORD']
 }
 
 def bbrf(command):
@@ -21,14 +22,26 @@ def pool(event, context):
     
     # get a list of all programs
     # and send each to run in a new lambda
-        # i'm not sure this is a win for this script
-    # but I wanna make sure this scales when
-    # hundreds of programs exist
+    # todo: this will require threading to process all 
+    # lambda invocations at the same time, rather than
+    # sequentially, which now causes the lambda to time out
+    # after ~126 worker invocations
     client = boto3.client('lambda', region_name='us-east-1')
-    
-    for program in bbrf('program list'):
-        print('Executing crtmonitor-worker for '+program)
-        client.invoke(FunctionName='bbrf-agents-dev-crtmonitor-worker', InvocationType='Event', Payload=json.dumps({'program': program}))
+   
+    loop = asyncio.new_event_loop()
+    programs = bbrf('programs')
+    print(programs)
+    asyncio.gather(
+        *[
+            loop.run_in_executor(None, functools.partial(
+                client.invoke,
+                FunctionName='bbrf-agents-dev-crtmonitor-worker',
+                InvocationType='Event',
+                Payload=json.dumps({'program': program})
+            ))
+            for program in programs
+        ]
+    )
 
 '''
 lambda-function crtmonitor-worker
@@ -47,7 +60,7 @@ def worker(event, context):
     else:
         print(event)
         return {"statusCode":400, "body": "ERROR - program or task not found."}
-    
+
     domains = []
     
     scope = bbrf("scope in --wildcard --top -p "+program)
@@ -87,4 +100,4 @@ def execute(domains):
     return list(set(results))  # remove duplicates for efficiency! e.g. for paypal this reduces from ~15k domains to ~4k
 
 if __name__ == "__main__":
-    worker({}, {})
+    pool({}, {})
