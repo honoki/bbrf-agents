@@ -1,4 +1,4 @@
-frameworkVersion: ">=1.2.0 <=2.22.0"
+frameworkVersion: ">=1.2.0"
 
 provider:
   name: aws
@@ -11,10 +11,11 @@ provider:
         - lambda:ListFunctions
       Resource: "*"
   environment:
-    BBRF_COUCHDB_URL: ${file(~/.bbrf/config.json):couchdb}
-    BBRF_USERNAME: ${file(~/.bbrf/config.json):username}
-    BBRF_PASSWORD: ${file(~/.bbrf/config.json):password}
-    BBRF_SLACK_TOKEN: ${file(~/.bbrf/config.json):slack_token}
+    CONFIG_FILE: ~/.bbrf/config.json
+    BBRF_COUCHDB_URL: ${file(${self:provider.environment.CONFIG_FILE}):couchdb}
+    BBRF_USERNAME: ${file(${self:provider.environment.CONFIG_FILE}):username}
+    BBRF_PASSWORD: ${file(${self:provider.environment.CONFIG_FILE}):password}
+    BBRF_IGNORE_SSL_ERRORS: ${file(${self:provider.environment.CONFIG_FILE}):ignore_ssl_errors}
     LAMBDA_NAME_PREFIX: ${self:service}-${self:custom.stage}-
     ENDPOINT_URL: { "Fn::Join" : ["", [" https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/" ] ]  }
     VIRUSTOTAL_TOKEN: ${file(tokens.json):virustotal}
@@ -47,7 +48,7 @@ functions:
   crtmonitor-agent:
     handler: domains/crtmonitor.pool
     events:
-      - schedule: rate(30 minutes)
+      - schedule: rate(180 minutes)
       
   crtmonitor-worker:
     handler: domains/crtmonitor.worker
@@ -100,10 +101,27 @@ functions:
           path: securitytrails
           method: get
     timeout: 600
+
+  waybackurls-agent:
+    runtime: go1.x
+    handler: gotest/bin/waybackurls
+    events:
+      - http:
+          path: waybackurls
+          method: get
+    timeout: 60
+    
+  assetfinder-agent:
+    runtime: go1.x
+    handler: assetfinder/bin/assetfinder
+    events:
+      - http:
+          path: assetfinder
+          method: get
+    timeout: 60
           
 plugins:
   - serverless-python-requirements
-  - serverless-plugin-scripts
   
 package:
   exclude:
@@ -119,6 +137,3 @@ custom:
     pythonBin: /usr/bin/python3
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
-  scripts:
-    hooks:
-      'deploy:finalize': sls invoke -f agent-registration-service

@@ -1,4 +1,4 @@
 requests==2.23.0
 git+git://github.com/aboul3la/Sublist3r.git#egg=sublist3r
 ratelimit==2.2.1
-bbrf==1.0.6
+bbrf==1.1.0
