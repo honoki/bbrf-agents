@@ -3,6 +3,7 @@ import requests
 import boto3
 import sublist3r
 from bbrf.bbrf import BBRFClient
+import asyncio
 import os
 
 MAX_PER_LAMBDA = 10
@@ -29,9 +30,24 @@ def pool(event, context):
     # hundreds of programs exist
     client = boto3.client('lambda', region_name='us-east-1')
     
-    for program in bbrf('programs'):
-        print('Executing sublister-worker for '+program)
-        client.invoke(FunctionName='bbrf-agents-dev-sublister-worker', InvocationType='Event', Payload=json.dumps({'program': program}))
+#    for program in bbrf('programs'):
+#        print('Executing sublister-worker for '+program)
+#        client.invoke(FunctionName='bbrf-agents-dev-sublister-worker', InvocationType='Event', Payload=json.dumps({'program': program}))    
+        
+    loop = asyncio.new_event_loop()
+    programs = bbrf('programs')
+    print(programs)
+    asyncio.gather(
+        *[
+            loop.run_in_executor(None, functools.partial(
+                client.invoke,
+                FunctionName='bbrf-agents-dev-sublister-worker',
+                InvocationType='Event',
+                Payload=json.dumps({'program': program})
+            ))
+            for program in programs
+        ]
+    )
 
 '''
 lambda-function sublister-worker
