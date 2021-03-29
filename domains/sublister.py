@@ -4,6 +4,7 @@ import boto3
 import sublist3r
 from bbrf.bbrf import BBRFClient
 import asyncio
+import functools
 import os
 
 MAX_PER_LAMBDA = 10
