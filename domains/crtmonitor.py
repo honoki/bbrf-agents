@@ -10,7 +10,7 @@ bbrf_conf = {
   "couchdb": os.environ['BBRF_COUCHDB_URL'],
   "username": os.environ['BBRF_USERNAME'],
   "password": os.environ['BBRF_PASSWORD'],
-  "ignore_ssl_errors": os.environ['BBRF_IGNORE_SSL_ERRORS'],
+  "ignore_ssl_errors": os.environ['BBRF_IGNORE_SSL_ERRORS'] if 'BBRF_IGNORE_SSL_ERRORS' in os.environ else False,
 }
 
 def bbrf(command):
